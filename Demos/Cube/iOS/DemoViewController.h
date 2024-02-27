@@ -28,9 +28,23 @@
 
 
 #pragma mark -
+#pragma mark GlassViewController
+
+/** The glass view controller for showing in glass. */
+@interface GlassViewController : UIViewController
+@end
+
+#pragma mark -
 #pragma mark DemoView
 
 /** The Metal-compatibile view for the demo Storyboard. */
 @interface DemoView : UIView
 @end
 
+#pragma mark -
+#pragma mark LogToFileWriter
+
+@interface LogToFileWriter : NSObject
+-(void) beginLog;
+-(void) writeLog:(NSString*) logText;
+@end

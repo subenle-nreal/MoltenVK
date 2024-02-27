@@ -34,12 +34,75 @@
 	uint64_t _frameCount;
 	BOOL _stop;
 	BOOL _useDisplayLink;
+    NSScreen* _displayScreen;
 }
 
 /** Since this is a single-view app, initialize Vulkan as view is appearing. */
 -(void) viewWillAppear {
 	[super viewWillAppear];
 
+    NSArray<NSScreen *> *connectedScreens = [NSScreen screens];
+    NSView* view ;//= [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 500, 500)]; // 设置视图的大小和位置;
+    
+    for (NSScreen *screen in connectedScreens) {
+        NSLog(@"External Screen Info:");
+        NSLog(@"Frame: %@", NSStringFromRect(screen.frame));
+        NSLog(@"Visible Frame: %@", NSStringFromRect(screen.visibleFrame));
+        NSLog(@"Device Description: %@", screen.deviceDescription);
+        NSLog(@"Backing Scale Factor: %.2f", screen.backingScaleFactor);
+        NSLog(@"Color Space: %@", screen.colorSpace);
+        NSDictionary *deviceInfo = screen.deviceDescription;
+        NSValue *screenNumberValue = deviceInfo[@"NSScreenNumber"];
+        CGDirectDisplayID displayID;
+        [screenNumberValue getValue:&displayID];
+        NSString *displayName = [NSString stringWithFormat:@"Display %d", (int)displayID];
+        NSLog(@"Display Name: %@", displayName);
+        NSString* localizedName;
+        if (@available(macOS 10.15, *)) {
+            NSLog(@"Localized Name: %@", screen.localizedName);
+            localizedName = screen.localizedName;
+        } else {
+            // Fallback on earlier versions
+        }
+        
+        // 如果需要，你可以进一步处理外接显示器的信息，比如设置不同的内容、样式等。
+        int screenWidth = screen.frame.size.width;
+        int screenHeight = screen.frame.size.height;
+//        if([localizedName isEqualToString:@"Built-in Retina Display"]){
+//        if([localizedName isEqualToString:@"DELL U2520D"]){
+        if([localizedName isEqualToString:@"Light"]){
+//        if(screenWidth == 3840 && screenHeight == 1080){
+//        if(screenWidth == 1280 && screenHeight == 800){
+//        if(screenWidth == 1920 && screenHeight == 1080){
+//            _displayScreen = screen;
+            // 创建一个窗口
+            NSRect rect;
+            rect.origin.x = 0;
+            rect.origin.y = 0;
+            rect.size.width = screen.frame.size.width;
+            rect.size.height = screen.frame.size.height;
+            NSWindow *window = [[NSWindow alloc] initWithContentRect:rect
+                                                           styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskClosable|NSWindowStyleMaskResizable|NSWindowStyleMaskMiniaturizable
+                                                             backing:NSBackingStoreBuffered
+                                                               defer:NO
+                                                              screen:screen];
+
+            // 创建一个视图
+            view = [[DemoView alloc] initWithFrame:NSMakeRect(0, 0, screen.frame.size.width, screen.frame.size.height)]; // 设置视图的大小和位置
+
+            // 设置视图的背景颜色
+            view.wantsLayer = YES;
+            view.layer.backgroundColor = [NSColor redColor].CGColor;
+            view.autoresizingMask  = NSViewWidthSizable | NSViewHeightSizable;
+
+            // 将视图添加到窗口中
+            [window.contentView addSubview:view];
+
+            // 显示窗口
+            [window makeKeyAndOrderFront:nil];
+        }
+    }
+    
 	self.view.wantsLayer = YES;		// Back the view with a layer created by the makeBackingLayer method.
 
 	// Enabling this will sync the rendering loop with the natural display link
@@ -61,7 +124,8 @@
 
 	const char* argv[] = { "cube", "--present_mode", vkPresentModeStr };
 	int argc = sizeof(argv)/sizeof(char*);
-	demo_main(&demo, self.view.layer, argc, argv);
+    demo_main(&demo, self.view.layer, argc, argv);
+//	demo_main(&demo, view.layer, argc, argv);
 
 	_stop = NO;
 	_frameCount = 0;
