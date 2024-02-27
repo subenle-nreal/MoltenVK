@@ -29,10 +29,12 @@
 	CADisplayLink* _displayLink;
 	struct demo demo;
     UIWindow* externalWindow;
+    Boolean shouldRend;
 }
 - (nullable instancetype)initWithCoder:(NSCoder *)coder {
     NSLog(@"initWithCoder");
     [self initLog];
+    shouldRend = false;
     return [super initWithCoder:coder];
 }
 - (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil {
@@ -61,7 +63,9 @@
     return formattedDateString;
 }
 
+//-(void) screenConnected:(NSNotification *)notification{
 -(void) screenConnected{
+//    UIScreen *newScreen = notification.object;
     NSString *logText = [NSString stringWithFormat:@"[%@] screenConnected.\n", [self currentTime]];
     LogToFileWriter* writer = [[LogToFileWriter alloc] init];
     [writer writeLog:logText];
@@ -72,12 +76,34 @@
         [writer writeLog:logMessage];
         NSLog(@"screenConnected screenCount: %lu, Find Screen %p dimensions: %@, scale: %f, mirrored: %p", (unsigned long)[[UIScreen screens] count], screen, NSStringFromCGRect(screen.bounds), screen.scale, screen.mirroredScreen);
     }
+    
+    if([screens count] > 1){
+        UIScreen* screen = screens[1];
+        CGRect screenBounds = screen.bounds;
+//        screenBounds.size.width /= 2;
+//        screenBounds.size.height /= 2;
+
+        externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+        externalWindow.screen = screen;
+
+        // 创建您的视图控制器并添加到窗口
+        GlassViewController *viewController = [[GlassViewController alloc] init];
+        viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色
+        UIView* view = viewController.view;
+        externalWindow.rootViewController = viewController;
+
+        // 显示窗口
+        [externalWindow makeKeyAndVisible];
+        
+        [self initRender:view];
+    }
 }
 
 -(void) screenDisconnected{
     NSString *logText = [NSString stringWithFormat:@"[%@] screenDisconnected.\n", [self currentTime]];
     LogToFileWriter* writer = [[LogToFileWriter alloc] init];
     [writer writeLog:logText];
+    [self initRender:NULL];
 }
 
 -(void) viewDidLoad {
@@ -90,11 +116,14 @@
                                                  name:UIScreenDidConnectNotification
                                                object:nil];
     [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(screenDisconnected:)
+                                             selector:@selector(screenDisconnected)
                                                  name:UIScreenDidDisconnectNotification
                                                object:nil];
+    // 检查是否有外接显示器
+    NSArray *connectedScreens = [UIScreen screens];
     
-    NSString *logText = [NSString stringWithFormat:@"[%@] ViewDidLoad.\n", [self currentTime]];
+    NSString *logText = [NSString stringWithFormat:@"[%@] ViewDidLoad. screenCount: %lu\n", [self currentTime], (unsigned long)[connectedScreens count]];
+    NSLog(@"%@", logText);
     LogToFileWriter* writer = [[LogToFileWriter alloc] init];
     [writer writeLog:logText];
 }
@@ -113,12 +142,17 @@
 #endif
     UIView* view = NULL;
     LogToFileWriter* writer = [[LogToFileWriter alloc] init];
-    NSArray<UIScreen *> *screens = [UIScreen screens];
-    for(UIScreen* screen in screens){
-        NSString *logMessage = [NSString stringWithFormat:@"[%@]screenCount: %lu, Find Screen %p dimensions: %@, scale: %f, mirrored: %p\n", [self currentTime], (unsigned long)[[UIScreen screens] count], screen, NSStringFromCGRect(screen.bounds), screen.scale, screen.mirroredScreen];
-        [writer writeLog:logMessage];
-        NSLog(@"screenCount: %lu, Find Screen %p dimensions: %@, scale: %f, mirrored: %p", (unsigned long)[[UIScreen screens] count], screen, NSStringFromCGRect(screen.bounds), screen.scale, screen.mirroredScreen);
-    }
+    NSArray<UIScreen *> *screens;
+//    do {
+//        sleep(1);
+        screens = [UIScreen screens];
+        for(UIScreen* screen in screens){
+            NSString *logMessage = [NSString stringWithFormat:@"[%@]screenCount: %lu, Find Screen %p dimensions: %@, scale: %f, mirrored: %p\n", [self currentTime], (unsigned long)[[UIScreen screens] count], screen, NSStringFromCGRect(screen.bounds), screen.scale, screen.mirroredScreen];
+            [writer writeLog:logMessage];
+            NSLog(@"screenCount: %lu, Find Screen %p dimensions: %@, scale: %f, mirrored: %p", (unsigned long)[[UIScreen screens] count], screen, NSStringFromCGRect(screen.bounds), screen.scale, screen.mirroredScreen);
+        }
+//    } while ([screens count] == 1);
+    
     
     
     for (UISceneSession *session in UIApplication.sharedApplication.openSessions) {
@@ -139,22 +173,22 @@
                 // 在这里处理外部屏幕
                 NSLog(@"Screen dimensions: %@, scale: %f", NSStringFromCGRect(screen.bounds), screen.scale);
                 
-                CGRect screenBounds = screen.bounds;
-                screenBounds.size.width /= 2;
-                screenBounds.size.height /= 2;
-
-                externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-                externalWindow.screen = screen;
-
-                // 创建您的视图控制器并添加到窗口
-                GlassViewController *viewController = [[GlassViewController alloc] init];
-                viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色
-                view = viewController.view;
-                externalWindow.rootViewController = viewController;
-
-                // 显示窗口
-                [externalWindow makeKeyAndVisible];
-                break;
+//                CGRect screenBounds = screen.bounds;
+//                screenBounds.size.width /= 2;
+//                screenBounds.size.height /= 2;
+//
+//                externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+//                externalWindow.screen = screen;
+//
+//                // 创建您的视图控制器并添加到窗口
+//                GlassViewController *viewController = [[GlassViewController alloc] init];
+//                viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色
+//                view = viewController.view;
+//                externalWindow.rootViewController = viewController;
+//
+//                // 显示窗口
+//                [externalWindow makeKeyAndVisible];
+//                break;
                 
             }
             else {
@@ -164,44 +198,64 @@
                 NSLog(@"Screen dimensions: %@, scale: %f", NSStringFromCGRect(screen.bounds), screen.scale);
                 NSLog(@"Screen cordSpace: %@, size: %@", screen.coordinateSpace, NSStringFromCGSize(screen.currentMode.size));
                 
-                CGRect screenBounds = screen.bounds;
-                screenBounds.size.width /= 2;
-                screenBounds.size.height /= 3;
-
-                externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
-                externalWindow.screen = screen;
-
-                // 创建您的视图控制器并添加到窗口
-                GlassViewController *viewController = [[GlassViewController alloc] init];
-                viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色
-                view = viewController.view;
-                externalWindow.rootViewController = viewController;
-
-                // 显示窗口
-                [externalWindow makeKeyAndVisible];
+//                CGRect screenBounds = screen.bounds;
+//                screenBounds.size.width /= 2;
+//                screenBounds.size.height /= 3;
+//
+//                externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
+//                externalWindow.screen = screen;
+//
+//                // 创建您的视图控制器并添加到窗口
+//                GlassViewController *viewController = [[GlassViewController alloc] init];
+//                viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色
+//                view = viewController.view;
+//                externalWindow.rootViewController = viewController;
+//
+//                // 显示窗口
+//                [externalWindow makeKeyAndVisible];
                 
             }
         }
     }
+    [self initRender:NULL];
+}
+
+-(void) initRender:(UIView*) view {
+#if TARGET_OS_SIMULATOR
+    // Avoid linear host-coherent texture loading on simulator
+    const char* argv[] = { "cube", "--use_staging" };
+#else
+    const char* argv[] = { "cube" };
+#endif
     
+    int argc = sizeof(argv)/sizeof(char*);
     
-	int argc = sizeof(argv)/sizeof(char*);
+    if(shouldRend){
+        shouldRend = false;
+        demo_cleanup(&demo);
+    }
+    
     if(view == NULL) {
         demo_main(&demo, self.view.layer, argc, argv);
     }
     else {
         demo_main(&demo, view.layer, argc, argv);
     }
-	demo_draw(&demo);
-
-	uint32_t fps = 60;
-	_displayLink = [CADisplayLink displayLinkWithTarget: self selector: @selector(renderLoop)];
-	[_displayLink setFrameInterval: 60 / fps];
-	[_displayLink addToRunLoop: NSRunLoop.currentRunLoop forMode: NSDefaultRunLoopMode];
+    demo_draw(&demo);
+    shouldRend = true;
+    uint32_t fps = 60;
+    _displayLink = [CADisplayLink displayLinkWithTarget: self selector: @selector(renderLoop)];
+    [_displayLink setFrameInterval: 60 / fps];
+    [_displayLink addToRunLoop: NSRunLoop.currentRunLoop forMode: NSDefaultRunLoopMode];
 }
 
 -(void) renderLoop {
-	demo_draw(&demo);
+    if(shouldRend){
+        demo_draw(&demo);
+    }
+    // 检查是否有外接显示器
+//    NSArray *connectedScreens = [UIScreen screens];
+//    NSLog(@"renderLoop screen count: %lu", [connectedScreens count]);
 }
 
 // Allow device rotation to resize the swapchain

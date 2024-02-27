@@ -24,6 +24,7 @@
 
 /** The main view controller for the demo storyboard. */
 @interface DemoViewController : UIViewController
+//-(void) screenConnected:(NSNotification *)notification;
 @end
 
 
