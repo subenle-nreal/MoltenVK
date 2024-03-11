@@ -17,7 +17,7 @@
  */
 
 #import "DemoViewController.h"
-
+#import <AVFoundation/AVFoundation.h>
 #include <MoltenVK/mvk_vulkan.h>
 #include "cube.c"
 
@@ -85,7 +85,6 @@
 
         externalWindow = [[UIWindow alloc] initWithFrame:screenBounds];
         externalWindow.screen = screen;
-
         // 创建您的视图控制器并添加到窗口
         GlassViewController *viewController = [[GlassViewController alloc] init];
         viewController.view.backgroundColor = [UIColor orangeColor]; // 示例背景色

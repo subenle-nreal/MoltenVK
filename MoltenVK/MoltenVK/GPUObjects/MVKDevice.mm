@@ -5052,6 +5052,16 @@ void MVKDevice::enableExtensions(const VkDeviceCreateInfo* pCreateInfo) {
 // Create the command queues
 void MVKDevice::initQueues(const VkDeviceCreateInfo* pCreateInfo) {
 	auto qFams = _physicalDevice->getQueueFamilies();
+	uint32_t qfCnt = uint32_t(qFams.size());
+
+	for(uint32_t i = 0; i < qfCnt; i++){
+		MVKQueueFamily* qFam = qFams[i];
+		VkQueueFamilyProperties qfProps;
+		qFam->getProperties(&qfProps);
+		MVKLogInfo("Created VkDevice qFam[%d] queueCount= %d", i, qfProps.queueCount);
+	}
+
+
 	uint32_t qrCnt = pCreateInfo->queueCreateInfoCount;
 	for (uint32_t qrIdx = 0; qrIdx < qrCnt; qrIdx++) {
 		const VkDeviceQueueCreateInfo* pQFInfo = &pCreateInfo->pQueueCreateInfos[qrIdx];
@@ -5067,6 +5077,7 @@ void MVKDevice::initQueues(const VkDeviceCreateInfo* pCreateInfo) {
 		}
 		auto& queues = _queuesByQueueFamilyIndex[qfIdx];
 		uint32_t qCnt = min(pQFInfo->queueCount, qfProps.queueCount);
+		MVKLogInfo("Created VkDevice pQFInfo->queueCount: %d, qfProps.queueCount: %d, real.queueCount: %d", pQFInfo->queueCount, qfProps.queueCount, qCnt);
 		for (uint32_t qIdx = 0; qIdx < qCnt; qIdx++) {
 			queues.push_back(new MVKQueue(this, qFam, qIdx, pQFInfo->pQueuePriorities[qIdx]));
 		}

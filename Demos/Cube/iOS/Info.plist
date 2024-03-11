@@ -48,7 +48,5 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<key>UIRequiresExternalSetup</key>
-	<true/>
 </dict>
 </plist>
